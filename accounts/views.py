@@ -123,11 +123,12 @@ class SetupView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         user = Account.objects.first()
 
-        if user:
-            return Response(
-                MessageSerializer({"message": "Forbidden"}).data,
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        # Todo: Uncomment this when deploying to production
+        # if user:
+        #     return Response(
+        #         MessageSerializer({"message": "Forbidden"}).data,
+        #         status=status.HTTP_403_FORBIDDEN,
+        #     )
 
         serializer = self.serializer_class(data=request.data)
 
