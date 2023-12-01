@@ -185,3 +185,9 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 EMAIL_PORT = env("EMAIL_PORT")
 EMAIL_USE_TLS = env("EMAIL_USE_TLS", cast=bool, default=True)
 EMAIL_FROM = env("EMAIL_FROM")
+
+
+# Static files (CSS, JavaScript, Images)
+
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "static"
