@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_filters",
+    "storages",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -187,7 +188,29 @@ EMAIL_USE_TLS = env("EMAIL_USE_TLS", cast=bool, default=True)
 EMAIL_FROM = env("EMAIL_FROM")
 
 
-# Static files (CSS, JavaScript, Images)
+if not DEBUG:
+    AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
+    AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
+    AWS_DEFAULT_ACL = "public-read"
+    AWS_S3_REGION = env("AWS_S3_REGION")
+    AWS_S3_ENDPOINT_URL = f"https://{AWS_S3_REGION}.digitaloceanspaces.com"
+    CDN_ENDPOINT_URL = f"https://{AWS_S3_REGION}.cdn.digitaloceanspaces.com"
+    AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
+    # static settings
+    AWS_LOCATION = "static"
+    STATIC_URL = f"{CDN_ENDPOINT_URL}/{AWS_LOCATION}/"
+    STORAGES = {
+        "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},
+        "staticfiles": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+    }
+else:
+    STATIC_URL = "/static/"
+    STATIC_ROOT = BASE_DIR / "staticfiles"
 
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "static"
+STATICFILES_DIRS = (BASE_DIR / "static",)
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "mediafiles"

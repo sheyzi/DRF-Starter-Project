@@ -15,7 +15,3 @@ urlpatterns = [
     ),
     path("api/inventory/", include("inventory.urls")),
 ]
-
-
-# Setup for serving static files
-urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
