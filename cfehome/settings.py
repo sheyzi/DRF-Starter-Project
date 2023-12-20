@@ -32,6 +32,27 @@ DEBUG = env("DEBUG")
 
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[FRONTEND_URL])
+CORS_URLS_REGEX = r"^/api/.*$"  # CORS only for API endpoints
+CORS_ALLOW_METHODS = (
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+)
+
+CORS_ALLOW_HEADERS = (
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+)
+
 
 # Application definition
 
@@ -42,6 +63,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
     "django_filters",
     "storages",
     "rest_framework",
