@@ -3,14 +3,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission, Group
 from django.core import exceptions
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.encoding import (
-    smart_str,
-    force_str,
-    smart_bytes,
-    DjangoUnicodeDecodeError,
-)
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from cfehome.serializers import MessageSerializer
 
@@ -18,51 +10,26 @@ User = get_user_model()
 
 
 class UserExistsMessageSerializer(MessageSerializer):
-    user_exists = serializers.BooleanField()
-
-    def create(self, validated_data):
-        raise NotImplementedError()
-
-    def update(self, instance, validated_data):
-        raise NotImplementedError()
+    exists = serializers.BooleanField()
 
 
 class TokenObtainPairResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField()
 
-    def create(self, validated_data):
-        raise NotImplementedError()
-
-    def update(self, instance, validated_data):
-        raise NotImplementedError()
-
 
 class TokenRefreshResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
-
-    def create(self, validated_data):
-        raise NotImplementedError()
-
-    def update(self, instance, validated_data):
-        raise NotImplementedError()
+    refresh = serializers.CharField()
 
 
 class TokenVerifyResponseSerializer(serializers.Serializer):
-    def create(self, validated_data):
-        raise NotImplementedError()
-
-    def update(self, instance, validated_data):
-        raise NotImplementedError()
+    pass
 
 
 class RegisterAccountSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     password2 = serializers.CharField(write_only=True)
-    id = serializers.IntegerField(read_only=True)
-    is_staff = serializers.BooleanField(read_only=True)
-    is_active = serializers.BooleanField(read_only=True)
-    is_superuser = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User
@@ -71,11 +38,20 @@ class RegisterAccountSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "email",
+            "email_verified",
             "is_staff",
             "is_active",
             "is_superuser",
             "password",
             "password2",
+        )
+
+        read_only_fields = (
+            "id",
+            "email_verified",
+            "is_staff",
+            "is_active",
+            "is_superuser",
         )
 
     def create(self, validated_data):
@@ -89,7 +65,7 @@ class RegisterAccountSerializer(serializers.ModelSerializer):
         errors = dict()
 
         if data["password"] != data["password2"]:
-            errors["password2"] = ["Passwords do not match"]
+            errors["password"] = ["The two password fields didn’t match."]
 
         newData = data.copy()
         newData.pop("password2")
@@ -107,11 +83,6 @@ class RegisterAccountSerializer(serializers.ModelSerializer):
 
 
 class AccountSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(read_only=True)
-    is_staff = serializers.BooleanField(read_only=True)
-    is_active = serializers.BooleanField(read_only=True)
-    is_superuser = serializers.BooleanField(read_only=True)
-
     class Meta:
         model = User
         fields = (
@@ -119,6 +90,16 @@ class AccountSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "email",
+            "email_verified",
+            "is_staff",
+            "is_active",
+            "is_superuser",
+        )
+
+        read_only_fields = (
+            "id",
+            "email",
+            "email_verified",
             "is_staff",
             "is_active",
             "is_superuser",
@@ -149,17 +130,23 @@ class PermissionSerializer(serializers.ModelSerializer):
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
+    new_password2 = serializers.CharField(required=True)
 
     def validate(self, data):
         errors = dict()
 
         if data["old_password"] == data["new_password"]:
-            errors["password"] = ["New password cannot be the same as old password"]
+            errors["new_password"] = [
+                "New password must be different from old password"
+            ]
+
+        if data["new_password"] != data["new_password2"]:
+            errors["new_password"] = ["The two password fields didn’t match."]
 
         try:
             validate_password(password=data["new_password"])
         except exceptions.ValidationError as e:
-            errors["password"] = list(e.messages)
+            errors["new_password"] = list(e.messages)
 
         if errors:
             raise serializers.ValidationError(errors)

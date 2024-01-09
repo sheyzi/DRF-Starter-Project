@@ -80,7 +80,7 @@ class DecoratedTokenVerifyView(TokenVerifyView):
         return super().post(request, *args, **kwargs)
 
 
-class UserExistsView(generics.GenericAPIView):
+class AdminExistsView(generics.GenericAPIView):
     api_tags = ["User"]
     api_operation_id = "check_if_user_exists"
     api_summary = "Check if user exists"
@@ -95,53 +95,49 @@ class UserExistsView(generics.GenericAPIView):
         },
     )
     def get(reqests, *args, **kwargs):
-        user = Account.objects.first()
+        admin = Account.objects.first()
 
-        if user:
+        if admin:
             return Response(
                 UserExistsMessageSerializer(
-                    {"message": "User exists", "user_exists": True}
+                    {"message": "Admin exists", "exists": True}
                 ).data
             )
         else:
             return Response(
                 UserExistsMessageSerializer(
-                    {"message": "No user exists", "user_exists": False}
+                    {"message": "No admin exists", "exists": False}
                 ).data
             )
 
 
-class SetupView(generics.CreateAPIView):
+class SetupAdminView(generics.CreateAPIView):
     api_tags = ["User"]
     api_operation_id = "setup_user"
     api_summary = "Setup first superuser"
-    api_description = "Creates the first superuser in the database. This endpoint is only available if no user exists in the database."
+    api_description = "Creates the first superuser in the database. This endpoint is only available if no admin exists in the database."
 
     serializer_class = RegisterAccountSerializer
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
-        user = Account.objects.first()
+        admin = Account.objects.filter(is_superuser=True).first()
 
-        if user:
+        if admin:
             return Response(
-                MessageSerializer({"message": "Forbidden"}).data,
-                status=status.HTTP_403_FORBIDDEN,
+                MessageSerializer({"message": "Admin already exists"}).data,
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         serializer = self.serializer_class(data=request.data)
 
         if serializer.is_valid(raise_exception=True):
-            validated_data = serializer.validate(data=request.data)
+            validated_data = serializer.validate(data=request.data).dict()
 
             del validated_data["password2"]
-            user = Account.objects.create_superuser(**validated_data)
-            serializer = self.serializer_class(user)
+            admin = Account.objects.create_superuser(**validated_data)
+            serializer = self.serializer_class(admin)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(
-            data={"message": "Invalid data passed"}, status=status.HTTP_400_BAD_REQUEST
-        )
 
 
 class MeUpdateRetrieveView(generics.RetrieveUpdateAPIView):
@@ -366,18 +362,16 @@ class ChangePasswordView(generics.GenericAPIView):
                 update_session_auth_hash(request, user)
 
                 return Response(
-                    MessageSerializer({"message": "Password changed"}).data,
+                    MessageSerializer(
+                        {"message": "Password changed successfully"}
+                    ).data,
                     status=status.HTTP_200_OK,
                 )
 
             return Response(
-                MessageSerializer({"message": "Incorrect old password"}).data,
+                {"old_password": ["Incorrect old password"]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        return Response(
-            data={"message": "Invalid data passed"}, status=status.HTTP_400_BAD_REQUEST
-        )
 
 
 class ResetPasswordValidateTokenView(ResetPasswordValidateToken):
@@ -392,34 +386,34 @@ class ResetPasswordValidateTokenView(ResetPasswordValidateToken):
         operation_description="Validates a password reset token.",
     )
     def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+        return super().post(request, *args, **kwargs)  # pragma: no cover
 
 
-class ResetPasswordRequestTokenView(ResetPasswordRequestToken):
+class ForgotPasswordView(ResetPasswordRequestToken):
     api_tags = ["Authentication"]
-    api_operation_id = "request_password_reset_token"
+    api_operation_id = "forgot_password"
 
     @swagger_auto_schema(
         responses={
             status.HTTP_200_OK: StatusSerializer,
         },
-        operation_summary="Request password reset token",
-        operation_description="Requests a password reset token.",
+        operation_summary="Forgot password",
+        operation_description="Sends a password reset token to the user if they are registered.",
     )
     def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+        return super().post(request, *args, **kwargs)  # pragma: no cover
 
 
-class ResetPasswordConfirmView(ResetPasswordConfirm):
+class ResetPasswordView(ResetPasswordConfirm):
     api_tags = ["Authentication"]
-    api_operation_id = "confirm_password_reset"
+    api_operation_id = "reset_password"
 
     @swagger_auto_schema(
         responses={
             status.HTTP_200_OK: StatusSerializer,
         },
-        operation_summary="Confirm password reset",
-        operation_description="Confirms a password reset.",
+        operation_summary="Reset password",
+        operation_description="Changes the user's password.",
     )
     def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+        return super().post(request, *args, **kwargs)  # pragma: no cover

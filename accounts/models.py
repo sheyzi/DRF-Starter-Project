@@ -9,6 +9,7 @@ class Account(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(_("Email Address"), unique=True)
     first_name = models.CharField(_("First Name"), max_length=50)
     last_name = models.CharField(_("Last Name"), max_length=50)
+    email_verified = models.BooleanField(_("Email Verified"), default=False)
     is_staff = models.BooleanField(_("Staff Status"), default=False)
     is_active = models.BooleanField(_("Active Status"), default=True)
     date_joined = models.DateTimeField(_("Date Joined"), auto_now_add=True)

@@ -1,6 +1,16 @@
-# Spek & Boonen Backend
+# DRF Starter Project
 
-This is the backend for the Spek & Boonen ERP System. It is a REST API written in Python using the Django Rest Framework. It contains endpoints for all components of the ERP system.
+This is a starter project for a REST API written in Python using the Django Rest Framework. It contains all the boilerplate code needed to get started with a new project.
+
+## Features
+
+- Authentication using [Simple JWT](https://django-rest-framework-simplejwt.readthedocs.io/en/latest/)
+- User registration and email verification
+- User profile management
+- Password reset
+- User permissions and roles
+- API documentation using [Swagger](https://swagger.io/) and [Redoc](https://redoc.ly/)
+- S3 Compatible Media Storage
 
 ## Installation
 

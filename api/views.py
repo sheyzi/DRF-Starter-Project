@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import permissions
@@ -30,10 +31,12 @@ class HealthCheckView(generics.GenericAPIView):
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="Spek & Boonen ERP API",
-        default_version="v1",
-        description="""
-        This is the API documentation for the Spek & Boonen ERP API.
+        title=f"{settings.PROJECT_NAME}",
+        default_version=f"{settings.PROJECT_VERSION}",
+        description=f"""
+        This is the API documentation for {settings.PROJECT_NAME}.
+
+        {settings.PROJECT_DESCRIPTION}
 
         Filter, search and order fields are available for all endpoints that return a list of objects.
 

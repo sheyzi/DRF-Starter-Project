@@ -13,5 +13,8 @@ urlpatterns = [
             namespace="accounts",
         ),
     ),
-    path("api/inventory/", include("inventory.urls")),
 ]
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

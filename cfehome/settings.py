@@ -21,8 +21,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 environ.Env.read_env(env_file=BASE_DIR / ".env")
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+# Project Settings
+PROJECT_NAME = env("PROJECT_NAME", default="Django API Boilerplate")
+PROJECT_VERSION = env("PROJECT_VERSION", default="0.0.1")
+PROJECT_DESCRIPTION = env("PROJECT_DESCRIPTION", default="Django API Boilerplate")
+PROJECT_AUTHOR = env("PROJECT_AUTHOR", default="Spek & Boonen")
+PROJECT_AUTHOR_EMAIL = env("PROJECT_AUTHOR_EMAIL", default="johndoe@company.com")
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env("SECRET_KEY")
@@ -32,7 +38,8 @@ DEBUG = env("DEBUG")
 
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
-FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
+
+# CORS Settings
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[FRONTEND_URL])
 CORS_URLS_REGEX = r"^/api/.*$"  # CORS only for API endpoints
 CORS_ALLOW_METHODS = (
@@ -43,7 +50,6 @@ CORS_ALLOW_METHODS = (
     "POST",
     "PUT",
 )
-
 CORS_ALLOW_HEADERS = (
     "accept",
     "authorization",
@@ -55,7 +61,6 @@ CORS_ALLOW_HEADERS = (
 
 
 # Application definition
-
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -71,9 +76,8 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "django_rest_passwordreset",
     "drf_yasg",
-    "api",
+    "api.apps.ApiConfig",
     "accounts.apps.AccountsConfig",
-    "inventory",
 ]
 
 MIDDLEWARE = [
@@ -131,6 +135,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+    {
+        "NAME": "accounts.validators.StrongPasswordValidator",
     },
 ]
 
@@ -202,10 +209,10 @@ SWAGGER_SETTINGS = {
 
 # Email Backend Configuration
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = env("EMAIL_HOST")
-EMAIL_HOST_USER = env("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
-EMAIL_PORT = env("EMAIL_PORT")
+EMAIL_HOST = env("EMAIL_HOST", cast=str, default="")
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", cast=str, default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", cast=str, default="")
+EMAIL_PORT = env("EMAIL_PORT", cast=int, default=587)
 EMAIL_USE_TLS = env("EMAIL_USE_TLS", cast=bool, default=True)
 EMAIL_FROM = env("EMAIL_FROM")
 
@@ -223,16 +230,18 @@ if not DEBUG:
     AWS_LOCATION = "static"
     STATIC_URL = f"{CDN_ENDPOINT_URL}/{AWS_LOCATION}/"
     STORAGES = {
-        "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},
+        "default": {"BACKEND": "cfehome.storage_backend.PublicMediaStorage"},
         "staticfiles": {
-            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "BACKEND": "cfehome.storage_backend.StaticStorage",
         },
     }
+    # media settings
+    PUBLIC_MEDIA_LOCATION = "media"
+    MEDIA_URL = f"{CDN_ENDPOINT_URL}/{PUBLIC_MEDIA_LOCATION}/"
 else:
     STATIC_URL = "/static/"
     STATIC_ROOT = BASE_DIR / "staticfiles"
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "mediafiles"
 
 STATICFILES_DIRS = (BASE_DIR / "static",)
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "mediafiles"
