@@ -11,6 +11,8 @@ class AccountAdmin(admin.ModelAdmin):
         "last_name",
         "date_joined",
         "last_login",
+        "is_active",
+        "email_verified",
         "is_superuser",
         "is_staff",
     )

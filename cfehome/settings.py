@@ -32,6 +32,9 @@ FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env("SECRET_KEY")
+EMAIL_VERIFICATION_EXPIRY_DAYS = env("EMAIL_VERIFICATION_EXPIRY_DAYS", default=7)
+EMAIL_VERIFICATION_EXPIRY = timedelta(days=EMAIL_VERIFICATION_EXPIRY_DAYS)
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG")

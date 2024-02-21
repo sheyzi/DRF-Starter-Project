@@ -6,7 +6,7 @@ app_name = "accounts"
 
 urlpatterns = [
     path("me/", views.MeUpdateRetrieveView.as_view(), name="me"),
-    path("user_exists/", views.AdminExistsView.as_view(), name="admin_exists"),
+    path("admin_exists/", views.AdminExistsView.as_view(), name="admin_exists"),
     path("setup-admin/", views.SetupAdminView.as_view(), name="setup_admin"),
     path("login/", views.DecoratedTokenObtainPairView.as_view(), name="login"),
     path("refresh/", views.DecoratedTokenRefreshView.as_view(), name="refresh"),
@@ -45,4 +45,9 @@ urlpatterns = [
         name="retrieve_group",
     ),
     path("permissions/", views.ListPermissionView.as_view(), name="list_permissions"),
+    path(
+        "send-email-verification/",
+        views.ResendVerificationEmailView.as_view(),
+    ),
+    path("verify-email/", views.VerifyEmailView.as_view(), name="verify_email"),
 ]

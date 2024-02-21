@@ -14,7 +14,8 @@ from rest_framework import status
 from django.contrib.auth import update_session_auth_hash
 
 from cfehome.serializers import MessageSerializer, StatusSerializer
-from .models import Account
+from cfehome.utils import Util
+from .models import Account, BlacklistedToken
 from .serializers import (
     RegisterAccountSerializer,
     AccountSerializer,
@@ -25,14 +26,17 @@ from .serializers import (
     GroupSerializer,
     PermissionSerializer,
     ChangePasswordSerializer,
+    ResendVerificationEmailSerializer,
+    VerifyEmailSerializer,
 )
-from .permissions import IsUserManager, IsGroupManager
+from cfehome.permissions import IsEntityManager
 
 from django_rest_passwordreset.views import (
     ResetPasswordConfirm,
     ResetPasswordValidateToken,
     ResetPasswordRequestToken,
 )
+from .signals import send_verification_mail
 
 
 class DecoratedTokenObtainPairView(TokenObtainPairView):
@@ -132,7 +136,7 @@ class SetupAdminView(generics.CreateAPIView):
         serializer = self.serializer_class(data=request.data)
 
         if serializer.is_valid(raise_exception=True):
-            validated_data = serializer.validate(data=request.data).dict()
+            validated_data = serializer.validate(data=request.data)
 
             del validated_data["password2"]
             admin = Account.objects.create_superuser(**validated_data)
@@ -193,6 +197,118 @@ class RegisterView(generics.CreateAPIView):
     api_tags = ["User"]
     api_operation_id = "register_user"
 
+    @swagger_auto_schema(
+        operation_summary="Register user",
+        operation_description="Registers a new user.",
+        operation_id="register_user",
+    )
+    def post(self, request, *args, **kwargs):
+
+        serializer = self.serializer_class(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            validated_data = serializer.validate(data=request.data)
+
+            del validated_data["password2"]
+            user = Account.objects.create_user(**validated_data)
+            send_verification_mail.send(sender=self.__class__, instance=self, user=user)
+
+            serializer = self.serializer_class(user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ResendVerificationEmailView(generics.GenericAPIView):
+    serializer_class = ResendVerificationEmailSerializer
+    permission_classes = [permissions.AllowAny]
+
+    api_tags = ["User"]
+    api_operation_id = "resend_verification_email"
+    api_summary = "Resend verification email"
+    api_description = "Resends the email verification email to the user."
+
+    @swagger_auto_schema(
+        operation_summary="Resend verification email",
+        operation_description="Resends the email verification email to the user.",
+        operation_id="resend_verification_email",
+        responses={
+            status.HTTP_200_OK: MessageSerializer,
+            status.HTTP_400_BAD_REQUEST: MessageSerializer,
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            data = serializer.validated_data
+            user = Account.objects.get(email=data["email"])
+
+            if user.email_verified:
+                return Response(
+                    MessageSerializer({"message": "Email already verified"}).data,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            send_verification_mail.send(sender=self.__class__, instance=self, user=user)
+
+            return Response(
+                MessageSerializer(
+                    {"message": "Verification email sent successfully"}
+                ).data,
+                status=status.HTTP_200_OK,
+            )
+
+
+class VerifyEmailView(generics.GenericAPIView):
+    serializer_class = VerifyEmailSerializer
+    permission_classes = [permissions.AllowAny]
+
+    api_tags = ["User"]
+    api_operation_id = "verify_email"
+    api_summary = "Verify email"
+    api_description = "Verifies the user's email."
+
+    @swagger_auto_schema(
+        operation_summary="Verify email",
+        operation_description="Verifies the user's email.",
+        operation_id="verify_email",
+        responses={
+            status.HTTP_200_OK: MessageSerializer,
+            status.HTTP_400_BAD_REQUEST: MessageSerializer,
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            data = serializer.validated_data
+            token = data["token"]
+
+            payload = Util.validate_verification_token(token)
+
+            if not payload:
+                return Response(
+                    MessageSerializer({"message": "Invalid token"}).data,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            user = Account.objects.get(id=payload["user_id"])
+
+            BlacklistedToken.objects.create(token=token)
+
+            if user.email_verified:
+                return Response(
+                    MessageSerializer({"message": "Email already verified"}).data,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            user.email_verified = True
+            user.save()
+
+            return Response(
+                MessageSerializer({"message": "Email verified successfully"}).data,
+                status=status.HTTP_200_OK,
+            )
+
 
 class ListAccountsView(generics.ListAPIView):
     """
@@ -203,7 +319,7 @@ class ListAccountsView(generics.ListAPIView):
 
     serializer_class = AccountSerializer
 
-    permission_classes = [IsUserManager]
+    permission_classes = [IsEntityManager]
     queryset = serializer_class.Meta.model.objects.all().order_by("-date_joined")
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["email", "first_name", "last_name"]
@@ -217,7 +333,7 @@ class ListAccountsView(generics.ListAPIView):
 class RetrieveUpdateAccountView(generics.RetrieveUpdateAPIView):
     serializer_class = AccountSerializer
 
-    permission_classes = [IsUserManager]
+    permission_classes = [IsEntityManager]
     queryset = serializer_class.Meta.model.objects.all()
     lookup_field = "id"
 
@@ -250,7 +366,7 @@ class RetrieveUpdateAccountView(generics.RetrieveUpdateAPIView):
 
 class CreateListGroupView(generics.ListCreateAPIView):
     serializer_class = GroupSerializer
-    permission_classes = [IsGroupManager]
+    permission_classes = [IsEntityManager]
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["name"]
@@ -279,7 +395,7 @@ class CreateListGroupView(generics.ListCreateAPIView):
 
 class ListPermissionView(generics.ListAPIView):
     serializer_class = PermissionSerializer
-    permission_classes = [IsGroupManager]
+    permission_classes = [IsEntityManager]
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["name", "codename"]
@@ -295,7 +411,7 @@ class ListPermissionView(generics.ListAPIView):
 
 class RetrieveUpdateDestroyGroupView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = GroupSerializer
-    permission_classes = [IsGroupManager]
+    permission_classes = [IsEntityManager]
 
     lookup_field = "id"
     queryset = Group.objects.all()

@@ -1,8 +1,16 @@
+from django.conf import settings
+import jwt
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils.translation import gettext_lazy as _
+from django_rest_passwordreset.tokens import get_token_generator
+from django.utils import timezone
+import datetime
 
 from .managers import AccountManager
+
+
+TOKEN_GENERATOR_CLASS = get_token_generator()
 
 
 class Account(AbstractBaseUser, PermissionsMixin):
@@ -28,3 +36,11 @@ class Account(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class BlacklistedToken(models.Model):
+    token = models.CharField(max_length=500)
+    blacklisted_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.token
